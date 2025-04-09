@@ -16,11 +16,11 @@ x0_initial = 3; xs = 0; x0 = x0_initial;
 
 sample_interval = 0.1; simulation_interval = 1e-4;
 steps_per_interval = round(sample_interval/simulation_interval); % number of steps in one sample interval
-sim_steps = 50; % number of simulation steps
+sim_steps = 100; % number of simulation steps
 
 % controller parameters
-Nc = 1; % controller horizon
-Np = 1; % prediction horizon
+Nc = 6; % controller horizon
+Np = 15; % prediction horizon
 Q = 1; % state cost
 R = 1e-3; % control cost
 

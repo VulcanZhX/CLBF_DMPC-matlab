@@ -23,14 +23,14 @@ end
 
 global func
 func = @(x, u) -x + u;
-U = [1 0;0 1;1 0];
+U = [1 3;-3 -1;-1 1];
 [cineq, ceq] = nonlinear(U, x0, 5, x_barrier, d_barrier);
 
 function [cineq, ceq] = nonlinear(U, x0, Np, x_barrier, d_barrier)
     % suppose ||x0-x_barrier||>=d_barrier
     global func
 
-    cineq = zeros(Np, 1); ceq = [];
+    cineq = []; ceq = [];
     U = U';
     syms t;
     uf(t) = [0; 0]*t;
@@ -39,14 +39,14 @@ function [cineq, ceq] = nonlinear(U, x0, Np, x_barrier, d_barrier)
             uf(t) = uf(t) + U(:, i)*(heaviside(t-(i-1)) - heaviside(t-i));
         else
             uf(t) = uf(t) + U(:, size(U, 2))*(heaviside(t-(size(U, 2)-1)));
-            break
         end
     end
     uf_handle = matlabFunction(uf);
+
     [t, x_sol] = ode45(@(t,x) func(x, uf_handle(t)), [0 Np], x0);
     t_sample = 1:Np;
     x_sol_sample = interp1(t, x_sol, t_sample);
     for i_sample = 1:Np
-        cineq(i_sample, :) = d_barrier - norm(x_sol_sample(i_sample,:)'-x_barrier);
+        cineq = [cineq; ]
     end
 end
