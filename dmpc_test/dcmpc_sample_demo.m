@@ -15,13 +15,13 @@ func2 = @(x1, x2, u1, u2) A(2,:)*[x1; x2]  + B(2,:)*[u1; u2];
 x0_initial = [1.5 3]'; xs = [0 0]'; x0 = x0_initial;
 
 % time parameters
-sample_interval = 0.01; simulation_interval = 1e-4;
+sample_interval = 0.05; simulation_interval = 1e-4;
 steps_per_interval = round(sample_interval/simulation_interval); % number of steps in one sample interval
-sim_steps = 110; % number of simulation steps, overall time = sim_steps*sample_interval
+sim_steps = 100; % number of simulation steps, overall time = sim_steps*sample_interval
 
 % controller parameters
 Nc = 2; % controller horizon
-Np = 6; % prediction horizon
+Np = 4; % prediction horizon
 Q = eye(2); % state cost
 R = 1e-3*eye(2); % control cost
 
@@ -38,6 +38,7 @@ U_initial = [0.2 0.1; 0.1 0];
 lb = [-3 -3; -3 -3];
 ub = [3 3; 3 3];
 options = optimoptions('fmincon', 'Display', 'off');
+tic;
 for i_sim = 1:sim_steps
     % optimization problem for system 1
     sub_x0_struct = struct('xhost', x0(1), 'xhost_s', xs(1), 'xadj', x0(2), 'xadj_s', xs(2));
@@ -60,7 +61,7 @@ for i_sim = 1:sim_steps
     u_initial = u_initial(1:Nc,:);
 end
 plot(x_log(:,1), x_log(:,2), '-*')
-
+toc;
 
 function J = sub_cost_function(subsys, u_host, u_adj, sub_x0_struct, Nc, Np, sub_Q, sub_R)
 global sample_interval simulation_interval
