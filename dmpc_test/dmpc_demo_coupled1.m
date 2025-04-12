@@ -9,10 +9,11 @@ sys = @(x, u) A*x + B*u; % system function
 
 
 % initial state and target state
-x0_initial = [2.25 0.5]'; xs = [0 0]'; x0 = x0_initial;
+x0_initial = [1 2]'; xs = [0 0]'; x0 = x0_initial;
 
 % time parameters
-sample_interval = 0.05; simulation_interval = 1e-4;
+sample_interval = 0.025; simulation_interval = 1e-4;
+small_sample_interval = 0.005; unsafe_sample_interval = 0.01; safe_sample_interval = 0.025; 
 sim_steps = 1000; % number of simulation steps, overall time = sim_steps*sample_interval
 max_iteration = 100; % number of iterations within one sample interval
 
@@ -24,14 +25,16 @@ R = 1e-3*eye(2); % control cost
 
 % initial input guess and bounds
 U_initial = rand(Nc, 2);
-U_lb = -2*ones(Nc, 2); % lower bound
-U_ub = 2*ones(Nc, 2); % upper bound
+U_lb = -3*ones(Nc, 2); % lower bound
+U_ub = 3*ones(Nc, 2); % upper bound
 
 % log the state and control input
 x_log = []; u_log = [];
 
 % barriers
 x_barrier = [1 0]'; d_barrier = 0.5;
+% warning and safety margin = d + eps_*
+eps_warning = 0.25;
 
 % rolling optimization
 opt_options = optimoptions('fmincon', 'Display', 'off');
@@ -86,12 +89,22 @@ for i_sim = 1:sim_steps
     x_log = [x_log x0_new]; % log the state
     u_log = [u_log U_initial(1, :)']; % log the control input
     x0 = x0_new; % update state
+
+    sample_interval = safe_sample_interval;
+    % precheck state safety
+    if norm(x0 - x_barrier) - d_barrier <= eps_warning
+        sample_interval = unsafe_sample_interval;
+    end
+
     % display elasped time of the current loop
     fprintf('Simulation step %d, elapsed time: %.4f seconds, current error: %.4f\n', i_sim, toc, norm(x0 - xs));
     % time forwarding terminal condition
     if norm(x0 - xs) < 0.5
-        sample_interval = 0.005;
+        sample_interval = small_sample_interval;
         R = 1e-2*eye(2);
+        if ~exist('inflection', "var")
+            inflection = x0;
+        end
     end
     simulation_timer = simulation_timer + sample_interval;
     if norm(x0 - xs) < 0.02
@@ -107,11 +120,26 @@ figure
 plot(x_log(1,:), x_log(2,:), 'LineWidth', 1, 'Color', 'b')
 hold on
 fimplicit(@(x1,x2) (x1-x_barrier(1))^2+(x2-x_barrier(2))^2-d_barrier^2, "--")
+scatter(inflection(1), inflection(2), 'r*')
 axis([-1 4 -1 4])
 grid on
 xlabel('x1')
 ylabel('x2')
 title('State evolution')
+
+% plot control input
+figure
+title('Control input evolution')
+xlabel('Sample step')
+ylabel('Control input')
+axis([0 length(u_log) -2 2])
+subplot(2, 1, 1);
+plot(1:length(u_log), u_log(1, :), 'LineWidth', 1, 'Color', 'b')
+
+subplot(2, 1, 2);
+plot(1:length(u_log), u_log(2, :), 'LineWidth', 1, 'Color', 'g')
+
+
 
 
 function J = sub_cost_function(subsys, u_host, u_adj, x0)
