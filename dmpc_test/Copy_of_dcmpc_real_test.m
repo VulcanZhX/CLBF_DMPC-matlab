@@ -26,8 +26,8 @@ max_p_iteration = 10; % number of iterations within one sample interval
 
 % controller parameters
 global Nc Np Q Ru
-Nc = 4; % controller horizon
-Np = 8; % prediction horizon
+Nc = 5; % controller horizon
+Np = 5; % prediction horizon
 Q = diag([1 0.05 1 0.05 1 0.05]); % state cost
 Ru = 1e-1* diag([0.1 1 0.1]); % control cost
 
@@ -92,7 +92,7 @@ for i_sim = 1:sim_steps
     u_log = [u_log U_initial(1, :)']; % log the control input'
     x0 = x0_new; % update state
     % display elasped time of the current loop
-    fprintf('Simulation step %d, elapsed time: %.4f seconds, current error: %.4f\n', i_sim, toc, norm(x0 - xs));
+    fprintf('Simulation step %d, elapsed time: %.4f seconds, current error: %.4f, J_now: %.4f\n', i_sim, toc, norm(x0 - xs), J_opt_comb);
     % terminal condition
     % if norm(x0 - xs) < 0.25
     %     sample_interval = 0.005;
@@ -153,7 +153,7 @@ global sample_interval simulation_interval Nc Np Q Ru
 x0_host_s = xs; % target state
 
 J = 0; % initialize cost
-P_terminal = 0.2*Q;
+P_terminal = 2*Q;
 u_overall = [u_host u_adj];
 
 for i = 1:Np
