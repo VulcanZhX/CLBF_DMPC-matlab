@@ -6,8 +6,8 @@ fun = @(u1) SUB1(u1,u1s,x1,x2,x3,x1s,x2s,x3s,x7,x8,x9,Delta,interval,pred,F1,FR,
 nlcon =@(u1) nonlinear1(u1,x1,x2,x3,x7,x8,x9,x1s,x2s,x3s,x7s,x8s,x9s,F1,FR,Ff1,V1,kA,kB,EAR,EBR,dHA,dHB,Cp,T0);
 %% Bounds (lb <= u <= ub)
 
-lb = [12.6e5-0.55e5];
-ub = [12.6e5+0.55e5];
+lb = [12.6e5-0.55e6];
+ub = [12.6e5+0.55e6];
 
 %% Initial Guess
 x0 = u1pred;

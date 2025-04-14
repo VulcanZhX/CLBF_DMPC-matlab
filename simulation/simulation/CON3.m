@@ -6,7 +6,7 @@ fun = @(u3) SUB3(u3,u3s,x7,x8,x9,x7s,x8s,x9s,x4,x5,x6,Delta,interval,pred,F2,F3,
 nlcon =@(u3) nonlinear3(u3,x4,x5,x6,x7,x8,x9,x4s,x5s,x6s,x7s,x8s,x9s,F2,F3,FD,FR,Cp,V3);
 %% Bounds (lb <= u <= ub)
 
-lb = [12.6e5-0.55e5];
+lb = [-12.6e5-0.55e5];
 ub = [12.6e5+0.55e5];
 
 %% Initial Guess

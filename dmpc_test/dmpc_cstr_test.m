@@ -29,9 +29,18 @@ func = @(x,u) [
 
 % solve system equilibrium
 u_stable = [0 0 0]';
-x_initial  = [0.2 0.5 467 0.4 0.5 434 0.25 0.6 459]';
+
+xs1=0;
+xs2=0;
+xs3=499.479234575489;
+xs4=0;
+xs5=0;
+xs6=475.482353426126;
+xs7=0;
+xs8=0;
+xs9=314.757389283257;
+x_initial  = [xs1 xs2 xs3 xs4 xs5 xs6 xs7 xs8 xs9]';
 [x_eq, fval] = fsolve(@(x) func(x, u_stable), x_initial, optimset('Display', 'off'));
 % show equilibrium state
 fprintf('Equilibrium state:\n');
-x_eq([3, 6, 9])
-fval
+disp(norm(fval))
