@@ -35,6 +35,6 @@ function [cineq,ceq] = nonlinear1(u1,x1,x2,x3,x7,x8,x9,x1s,x2s,x3s,x7s,x8s,x9s,F
    LgV=2*((x1-x1s)+(x2-x2s)+(x3-x3s))/(Cp*V1);
    dVx=2*((x1-x1s)+(x2-x2s)+(x3-x3s))*((Ff1*T0+FR*x9-F1*x3)/V1-(kA*exp(-EAR/x3)*x1*dHA+kB*exp(-EBR/x3)*x2*dHB)/Cp)+2*((x1-x1s)+(x2-x2s)+(x3-x3s))*kx/(Cp*V1);  
    cineq = LfV+LgV*u1-dVx+0.1;
-   ceq = -0.023*x^2 + 0.23*abs(x_2)
+   % ceq = -0.023*x2 + 0.23*abs(x2);
 end
 

@@ -67,7 +67,9 @@ u3s=0;
 cost1=0;
 cost2=0;
 cost3=0;
-
+cost1_log = [];
+cost2_log = [];
+cost3_log = [];
 
 
 %% initial state
@@ -216,9 +218,13 @@ while i < (tfinal/Delta + 1)
     delx8=x8-x8s;
     delx9=x9-x9s;
     
-    cost1=cost1+1.5*delx1*delx1+1.5*delx2*delx2+0.002*delx3*delx3+0.00005*u1*u1
-    cost2=cost2+1.2*delx4*delx4+1.2*delx5*delx5+0.0018*delx6*delx6+0.00005*u2*u2
-    cost3=cost3+1.15*delx7*delx7+1.15*delx8*delx8+0.0015*delx9*delx9+0.00005*u3*u3
+    cost1=cost1+1.5*delx1*delx1+1.5*delx2*delx2+0.002*delx3*delx3+0.00005*u1*u1;
+    cost2=cost2+1.2*delx4*delx4+1.2*delx5*delx5+0.0018*delx6*delx6+0.00005*u2*u2;
+    cost3=cost3+1.15*delx7*delx7+1.15*delx8*delx8+0.0015*delx9*delx9+0.00005*u3*u3;
+    
+    % cost1_log = [cost1_log cost1];
+    % cost2_log = [cost2_log cost2];
+    % cost3_log = [cost3_log cost3];
 
 
 i = i +1

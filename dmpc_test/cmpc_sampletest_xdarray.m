@@ -36,7 +36,7 @@ ub = [4 4; 4 4]; % upper bound
 
 for i_sim = 1:sim_steps
     % define optimization problem
-    nonlin_handle = @(U) nonlinear(U, x0, 2, x_barrier, d_barrier);
+    nonlin_handle = @(U) nonlinear(U, x0, Np, x_barrier, d_barrier);
     opt_problem = createOptimProblem('fmincon','objective',@(U)cost_function(U, x0, xs, Nc, Np, Q, R),...
         'lb',lb,'ub',ub,'x0',U_initial,'nonlcon', nonlin_handle,'options',options);
 
@@ -51,7 +51,15 @@ for i_sim = 1:sim_steps
 end
 
 plot(x_log(1,:), x_log(2,:), '-*')
+hold on
+fimplicit(@(x1,x2) (x1-x_barrier(1))^2+(x2-x_barrier(2))^2-d_barrier^2, "--")
+axis([-1 4 -1 4])
+grid on
+xlabel('x1')
+ylabel('x2')
+title('State evolution')
 axis equal
+
 % syms t;
 % uf(t) = [0; 0]*t;
 % for i = 1:length(u_log)

@@ -3,13 +3,13 @@ clear
 rng('default')
 global sample_interval simulation_interval Nc Np Q R
 % define LTI system:
-A = [-0.8 0.3; -0.15 -2];
-B = [0.5 0.1; 0.2 1];
+A = [-2 -0.3; -0.15 -1];
+B = [2 0.1; 0.2 1];
 sys = @(x, u) A*x + B*u; % system function
 
 
 % initial state and target state
-x0_initial = [2 1]'; xs = [0 0]'; x0 = x0_initial;
+x0_initial = [2 1.25]'; xs = [0 0]'; x0 = x0_initial;
 
 % time parameters
 sample_interval = 0.025; simulation_interval = 1e-4;
@@ -69,15 +69,10 @@ for i_sim = 1:sim_steps
         % nonlinear constraint test
         nonlin_gamma_cons = @(gamma)nonlinear_gamma_horizon(sys, gamma, U_opt1, U_opt2, U_initial(:, 1), U_initial(:, 2), x0, x_barrier, d_barrier, Np);
         opt_problem_convex_weight = createOptimProblem('fmincon', 'objective', weightcost_obj, ...
-            'x0', [0.2 0.2], 'lb', [0 0], 'ub', [1 1], 'nonlcon', nonlin_gamma_cons, 'options', opt_options);
+            'x0', [0.5 0.5], 'lb', [0 0], 'ub', [1 1], 'nonlcon', nonlin_gamma_cons, 'options', opt_options);
         % opt_problem_convex_weight1 = createOptimProblem('fmincon', 'objective', weightcost_obj, ...
         %    'x0', [0.5 0.5], 'lb', [0 0], 'ub', [1 1], 'options', opt_options);
         [gamma_opt, J_opt] = fmincon(opt_problem_convex_weight);
-
-        % display i_p, gamma and J_opt
-        fprintf('p-Iteration %d, gamma: [%.4f %.4f], J_opt: %.4f\n', i_p, gamma_opt(1), gamma_opt(2), J_opt);
-        % fprintf('p-Iteration %d, J_opt: %.4f\n', i_p, J_opt);
-    
         U_opt1_new = gamma_opt(1)*U_opt1 + (1-gamma_opt(1))*U_initial(:, 1);
         U_opt2_new = gamma_opt(2)*U_opt2 + (1-gamma_opt(2))*U_initial(:, 2);
 
