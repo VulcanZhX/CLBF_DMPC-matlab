@@ -60,21 +60,21 @@ x0_initial = [0.5 0.5 470 0.2 0.7 450 0.1 0.8 341]'; x0 = x0_initial;
 
 % time parameters
 global sample_interval simulation_interval
-sample_interval = 0.1; simulation_interval = 1e-4;
-sim_steps = 20000; % number of simulation steps, overall time = sim_steps*sample_interval
-max_p_iteration = 2; % number of iterations within one sample interval
+sample_interval = 0.01; simulation_interval = 1e-4;
+sim_steps = 10000; % number of simulation steps, overall time = sim_steps*sample_interval
+max_p_iteration = 1; % number of iterations within one sample interval
 
 % controller parameters
 global Nc Np Q Ru
 Nc = 4; % controller horizon
 Np = 6; % prediction horizon
 Q = diag([1, 1, 2, 1, 1, 2, 1, 1, 2]); % state cost
-Ru = 1e-6*eye(3); % control cost
+Ru = 1e-10*eye(3); % control cost
 
 % initial input guess and bounds
 U0 = 12.6e5 * ones(Nc, 3); % initial guess
-U_lb = (12.6e5 - 5e5)*ones(Nc, 3); % lower bound
-U_ub = (12.6e5 + 15e5)*ones(Nc, 3); % upper bound
+U_lb = repmat([12.6e5-0.56e6 16.2e5-0.55e5 0], Nc, 1); % lower bound
+U_ub = repmat([12.6e5+0.56e6 16.2e5+0.55e5 12.6e5+0.55e5], Nc, 1); % upper bound
 
 % log the state and control input
 x_log = []; u_log = [];
@@ -117,6 +117,7 @@ for i_sim = 1:sim_steps
         opt_problem_comb = createOptimProblem('fmincon', 'objective', weightcost_obj, ...
             'x0', [1 1 1], 'lb', [0 0 0], 'ub', [1 1 1], 'options', opt_options);
         [gamma_opt, J_opt_comb] = fmincon(opt_problem_comb);
+        J_opt_comb
         % update control input
         U_opt1_new = gamma_opt(1)*U_opt1 + (1-gamma_opt(1))*U0(:, 1);
         U_opt2_new = gamma_opt(2)*U_opt2 + (1-gamma_opt(2))*U0(:, 2);

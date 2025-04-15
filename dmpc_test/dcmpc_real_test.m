@@ -3,16 +3,15 @@ rng('default')
 
 % system parameters
 global F1 F2 F3 FD FR Ff1 Ff2 V1 V2 V3 alA alB alC kA kB EAR EBR dHA dHB Cp T0 xA0
-F1=35.5; F2=43.5; F3=15.5;
-FD=0.504; FR=50.4;
-Ff1=5; Ff2=5;
-V1=1*1000; V2=0.5*1000; V3=0.012*1000;
-alA=3.5; alB=1;alC=0.5;
-kA=2.77e3*3600; kB=2.5e3*3600;
-EA=50000; EB=60000;
-R=8.314; EAR=EA/R; EBR=EB/R;
-MW=250e-3; dHA=-60000/MW; dHB=-70000/MW;
-Cp=4.2e3; T0=313; xA0=1;
+F1=74.53; F2=75.03; F3=8.168;
+FD=0.662; FR=66.2;
+Ff1=8.33; Ff2=0.5;
+V1=13.41; V2=13.5; V3=0.5;
+alA=3.5; alB=1.1;alC=0.5;
+kA=0.2; kB=0.018;
+EAR=-100; EBR=-150;
+dHA=-40; dHB=-50;
+Cp=2.5; T0=313; xA0=1;
 
 % system definition
 func = @(x,u) [
@@ -27,54 +26,37 @@ func = @(x,u) [
     (F2*x(6)-(FD+FR)*x(9)-F3*x(9))/V3+u(3)/(Cp*V3);
     ];
 
-loc_func1 = @(x,u)[
-    (Ff1*xA0+FR*(alA*x(7)/(alA*x(7)+alB*x(8)+alC*(1-x(7)-x(8))))-F1*x(1))/V1-kA*exp(-EAR/x(3))*x(1);
-    (FR*(alB*x(8)/(alA*x(7)+alB*x(8)+alC*(1-x(7)-x(8))))-F1*x(2))/V1+kA*exp(-EAR/x(3))*x(1)-kB*exp(-EBR/x(3))*x(2);
-    (Ff1*T0+FR*x(9)-F1*x(3))/V1-(kA*exp(-EAR/x(3))*x(1)*dHA+kB*exp(-EBR/x(3))*x(2)*dHB)/Cp+u(1)/(Cp*V1);
-    ];
-
-loc_func2 = @(x,u)[
-    (Ff2*xA0+F1*x(1)-F2*x(4))/V2-kA*exp(-EAR/x(6))*x(4);
-    (F1*x(2)-F2*x(5))/V2+kA*exp(-EAR/x(6))*x(4)-kB*exp(-EBR/x(6))*x(5);
-    (Ff2*T0+F1*x(3)-F2*x(6))/V2-(kA*exp(-EAR/x(6))*x(4)*dHA+kB*exp(-EBR/x(6))*x(5)*dHB)/Cp+u(2)/(Cp*V2);
-    ];
-
-loc_func3 = @(x,u)[
-    (F2*x(4)-(FD+FR)*(alA*x(7)/(alA*x(7)+alB*x(8)+alC*(1-x(7)-x(8))))-F3*x(7))/V3;
-    (F2*x(5)-(FD+FR)*(alB*x(8)/(alA*x(7)+alB*x(8)+alC*(1-x(7)-x(8))))-F3*x(8))/V3;
-    (F2*x(6)-(FD+FR)*x(9)-F3*x(9))/V3+u(3)/(Cp*V3);
-    ];
-
 % initial state and target state
-xs1=0;
-xs2=0;
-xs3=499.479234575489;
-xs4=0;
-xs5=0;
-xs6=475.482353426126;
-xs7=0;
-xs8=0;
-xs9=314.757389283257;
+% xsi solved by fsolve(@(x)func(x,0),x_init)
+xs1=0.696;
+xs2=0.295;
+xs3=322.10;
+xs4=0.66;
+xs5=0.32;
+xs6=322.59;
+xs7=0.41;
+xs8=0.55;
+xs9=322.599;
 xs = [xs1 xs2 xs3 xs4 xs5 xs6 xs7 xs8 xs9]';
-x0_initial = [0.5 0.5 470 0.2 0.7 450 0.1 0.8 341]'; x0 = x0_initial;
+x0_initial = [0.3 0.5 475 0.2 0.421 450 0.2 0.570 315]'; x0 = x0_initial;
 
 % time parameters
 global sample_interval simulation_interval
 sample_interval = 0.1; simulation_interval = 1e-4;
-sim_steps = 20000; % number of simulation steps, overall time = sim_steps*sample_interval
-max_p_iteration = 1; % number of iterations within one sample interval
+sim_steps = 1200; % number of simulation steps, overall time = sim_steps*sample_interval
+max_p_iteration = 10; % number of iterations within one sample interval
 
 % controller parameters
 global Nc Np Q Ru
-Nc = 4; % controller horizon
-Np = 6; % prediction horizon
+Nc = 1; % controller horizon
+Np = 2; % prediction horizon
 Q = diag([1, 1, 2, 1, 1, 2, 1, 1, 2]); % state cost
-Ru = 1e-4*eye(3); % control cost
+Ru = 1e-3*eye(3); % control cost
 
 % initial input guess and bounds
-U0 = 12.6e5 * ones(Nc, 3); % initial guess
-U_lb = (12.6e5 - 5e5)*ones(Nc, 3); % lower bound
-U_ub = (12.6e5 + 5e5)*ones(Nc, 3); % upper bound
+U0 =  zeros(Nc, 3); % initial guess
+U_lb = repmat([-50 -50 -50], Nc, 1); % lower bound
+U_ub = repmat([100 100 100], Nc, 1); % upper bound
 
 % log the state and control input
 x_log = []; u_log = [];
@@ -123,7 +105,7 @@ for i_sim = 1:sim_steps
         U_opt3_new = gamma_opt(3)*U_opt3 + (1-gamma_opt(3))*U0(:, 3);
 
         % iteration terminal condition
-        if norm([U_opt1_new; U_opt2_new; U_opt3_new] - [U0(:, 1); U0(:, 2); U0(:, 3)]) < 1e-2
+        if norm([U_opt1_new; U_opt2_new; U_opt3_new] - [U0(:, 1); U0(:, 2); U0(:, 3)]) < 100 && i_p > 1
             break;
         end
         U0 = [U_opt1_new U_opt2_new U_opt3_new]; % update initial guess
@@ -138,52 +120,32 @@ for i_sim = 1:sim_steps
     fprintf('Simulation step %d, elapsed time: %.4f seconds, current error: %.4f\n', i_sim, toc, norm(x0 - xs));
     % terminal condition
     if norm(x0 - xs) < 25
-        sample_interval = 0.005;
-        % R = 1e-2*eye(3);
+        sample_interval = 0.01;
+        R = 1e-2*eye(3);
     end
     simulation_timer = simulation_timer + sample_interval;
-    if norm(x0 - xs) < 10
+    if norm(x0 - xs) < 5
         fprintf('Terminal condition met at step %d\n', i_sim);
         break;
     end
 end
 
+x_log = [x0_initial x_log]; % add initial state to log
 
-% function x0_new = sysfwd(sys, x0, u)
-% % sysfwd: forward simulation of the system
-% global sample_interval
-% [~, x_sol] = ode45(@(t,x) sys(x, u), [0 sample_interval], x0);
-% x0_new = x_sol(end, :)';
-% end
+% simulation time
+fprintf('Total simulation time: %.4f seconds\n', simulation_timer);
+% plot temperature
+figure(1)
+grid on
+xlabel ('Time(s)')
+plot(x_log(3,:),'linewidth',1.5)
+hold on
+plot(x_log(6,:),'linewidth',1.5)
+hold on
+plot(x_log(9,:),'linewidth',1.5)
+ylabel('Temperature (K)')
+legend('T1', 'T2', 'T3')
 
-% function J = sub_cost_function(subsys, u_host, u_adj, x0, xs)
-% % sub_cost_function: cost function for the subsystem
-% global sample_interval simulation_interval Nc Np Q Ru
-
-% % remember to delete this
-% x0_host_s = xs; % target state
-
-% J = 0; % initialize cost
-
-% u_overall = [u_host u_adj];
-
-% for i = 1:Np
-%     if i <= Nc
-%         u_i = u_overall(i, :)';
-%     else
-%         u_i = u_overall(Nc, :)';  % Nc <= Np
-%     end
-%     [t, sub_xhost_sol] = ode45(@(t, x) subsys(x, u_i), [0 sample_interval], x0);
-%     sub_xhost_fixed_interval = interp1(t, sub_xhost_sol, (0:simulation_interval:sample_interval-simulation_interval));
-
-%     % calculate cost in one sample interval
-%     delta_subx_array = sub_xhost_fixed_interval - repmat(x0_host_s', size(sub_xhost_fixed_interval, 1), 1); % X - Xs
-%     sub_weighted_norm = trace(delta_subx_array * Q * delta_subx_array');
-%     sub_discreted_normed_integeral = simulation_interval * sub_weighted_norm;
-%     J = J + sub_discreted_normed_integeral + u_i' * Ru * u_i * simulation_interval;
-%     x0 = sub_xhost_fixed_interval(end, :)';
-% end
-% end
 
 function x_nxt = sysfwd(sys, x0, u)
 % sysfwd: forward simulation of the system (one sample interval)
@@ -219,7 +181,7 @@ for i = 1:Np
     delta_subx_array = x_sample - repmat(xs, 1, size(x_sample, 2)); % X - Xs
     sub_weighted_norm = trace(delta_subx_array' * Q * delta_subx_array);
     sub_discreted_normed_integeral = simulation_interval * sub_weighted_norm;
-    J = J + sub_discreted_normed_integeral + u_i' * Ru * u_i * sample_interval;
+    J = J + sub_discreted_normed_integeral + u_i' * Ru * u_i * simulation_interval;
     x0 = x_sample(:, end); % update state
 end
 end

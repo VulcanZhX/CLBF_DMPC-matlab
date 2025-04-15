@@ -26,15 +26,15 @@ max_p_iteration = 10; % number of iterations within one sample interval
 
 % controller parameters
 global Nc Np Q Ru
-Nc = 5; % controller horizon
-Np = 5; % prediction horizon
+Nc = 2; % controller horizon
+Np = 4; % prediction horizon
 Q = diag([1 0.05 1 0.05 1 0.05]); % state cost
 Ru = 1e-1* diag([0.1 1 0.1]); % control cost
 
 % initial input guess and bounds
 U_initial = 2 * rand(Nc, 3) - 1; % initial guess
-U_lb = -2*ones(Nc, 3); % lower bound
-U_ub = 2*ones(Nc, 3); % upper bound
+U_lb = -1.5*ones(Nc, 3); % lower bound
+U_ub = 1.5*ones(Nc, 3); % upper bound
 % log the state and control input
 x_log = []; u_log = [];
 
@@ -47,7 +47,7 @@ for i_sim = 1:sim_steps
         % optimization problem for input 1
         U_host_init = U_initial(:, 1);
         U_adj_init = U_initial(:, 2:3);
-        localcost = @(U)sub_cost_function(func, U, U_adj_init, x0, xs);
+        localcost = @(U)sub_cost_function(func, U, U_adj_init, x0, xs, 1);
         opt_problem1 = createOptimProblem('fmincon', 'objective', localcost, ...
             'x0', U_host_init, 'lb', U_lb(:, 1), 'ub', U_ub(:, 1), 'options', opt_options);
         [U_opt1, J_opt1] = fmincon(opt_problem1);
@@ -55,6 +55,7 @@ for i_sim = 1:sim_steps
         % optimization problem for input 2
         U_host_init = U_initial(:, 2);
         U_adj_init = [U_initial(:, 1) U_initial(:, 3)];
+        localcost = @(U)sub_cost_function(func, U, U_adj_init, x0, xs, 2);
         opt_problem2 = createOptimProblem('fmincon', 'objective', localcost, ...
             'x0', U_host_init, 'lb', U_lb(:, 2), 'ub', U_ub(:, 2), 'options', opt_options);
         [U_opt2, J_opt2] = fmincon(opt_problem2);
@@ -62,13 +63,14 @@ for i_sim = 1:sim_steps
         % optimization problem for input 3
         U_host_init = U_initial(:, 3);
         U_adj_init = [U_initial(:, 1) U_initial(:, 2)];
+        localcost = @(U)sub_cost_function(func, U, U_adj_init, x0, xs, 3);
         opt_problem3 = createOptimProblem('fmincon', 'objective', localcost, ...
             'x0', U_host_init, 'lb', U_lb(:, 3), 'ub', U_ub(:, 3), 'options', opt_options);
         [U_opt3, J_opt3] = fmincon(opt_problem3);
 
         % convex combination of the three optimization problems
         weightcost_obj = @(gamma) sub_cost_function(func, gamma(1)*U_opt1 + (1-gamma(1))*U_initial(:, 1),...
-            [gamma(2)*U_opt2 + (1-gamma(2))*U_initial(:, 2), gamma(3)*U_opt3 + (1-gamma(3))*U_initial(:, 3)], x0, xs); % gamma in [0, 1]
+            [gamma(2)*U_opt2 + (1-gamma(2))*U_initial(:, 2), gamma(3)*U_opt3 + (1-gamma(3))*U_initial(:, 3)], x0, xs, 1); % gamma in [0, 1]
 
         % optimization problem for the convex combination
         opt_problem_comb = createOptimProblem('fmincon', 'objective', weightcost_obj, ...
@@ -145,7 +147,7 @@ legend('u1', 'u2', 'u3')
 
 
 
-function J = sub_cost_function(subsys, u_host, u_adj, x0, xs)
+function J = sub_cost_function(subsys, u_host, u_adj, x0, xs, ORDER)
 % sub_cost_function: cost function for the subsystem
 global sample_interval simulation_interval Nc Np Q Ru
 
@@ -154,7 +156,13 @@ x0_host_s = xs; % target state
 
 J = 0; % initialize cost
 P_terminal = 2*Q;
-u_overall = [u_host u_adj];
+if ORDER == 1
+    u_overall = [u_host u_adj];
+elseif ORDER == 2
+    u_overall = [u_adj(:,1) u_host u_adj(:,2)];
+else
+    u_overall = [u_adj u_host];
+end
 
 for i = 1:Np
     if i <= Nc
