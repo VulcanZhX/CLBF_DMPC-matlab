@@ -1,5 +1,5 @@
 clear
-rng('default')
+rng(12345)
 
 % system parameters
 global F1 F2 F3 FD FR Ff1 Ff2 V1 V2 V3 alA alB alC kA kB EAR EBR dHA dHB Cp T0 xA0
@@ -26,40 +26,49 @@ func = @(x,u) [
     (F2*x(6)-(FD+FR)*x(9)-F3*x(9))/V3+u(3)/(Cp*V3);
     ];
 
-% initial state and target state
-% xsi solved by fsolve(@(x)func(x,0),x_init)
-xs1=0.696;
-xs2=0.295;
-xs3=322.10;
-xs4=0.66;
-xs5=0.32;
-xs6=322.59;
-xs7=0.41;
-xs8=0.55;
-xs9=322.599;
-xs = [xs1 xs2 xs3 xs4 xs5 xs6 xs7 xs8 xs9]';
-x0_initial = [0.3 0.5 475 0.2 0.421 450 0.2 0.570 315]'; x0 = x0_initial;
+% solve system equilibrium
+u_stable = [0 0 0]';
+x0_initial = [0.33 0.5 495 0.232 0.421 450 0.82 0.570 420]'; x0 = x0_initial;
+[xs, fval] = fsolve(@(x) func(x, u_stable), x0_initial, optimset('Display', 'off'));
+
+% % initial state and target state (backup)
+% % xsi solved by fsolve(@(x)func(x,0),x_init)
+% xs1=0.696;
+% xs2=0.295;
+% xs3=322.10;
+% xs4=0.66;
+% xs5=0.32;
+% xs6=322.59;
+% xs7=0.41;
+% xs8=0.55;
+% xs9=322.599;
+% xs = [xs1 xs2 xs3 xs4 xs5 xs6 xs7 xs8 xs9]';
+% x0_initial = [0.3 0.5 475 0.2 0.421 450 0.2 0.570 315]'; x0 = x0_initial;
 
 % time parameters
 global sample_interval simulation_interval
 sample_interval = 0.1; simulation_interval = 1e-4;
-sim_steps = 1200; % number of simulation steps, overall time = sim_steps*sample_interval
+sim_steps = 300; % number of simulation steps, overall time = sim_steps*sample_interval
 max_p_iteration = 10; % number of iterations within one sample interval
 
 % controller parameters
 global Nc Np Q Ru
 Nc = 1; % controller horizon
 Np = 2; % prediction horizon
-Q = diag([1, 1, 2, 1, 1, 2, 1, 1, 2]); % state cost
-Ru = 1e-3*eye(3); % control cost
+Q = diag([1, 1, 0.5, 1, 1, 0.1, 1.2, 1.2, 0.1]); % state cost
+Ru = 1e-5*eye(3); % control cost
 
 % initial input guess and bounds
 U0 =  zeros(Nc, 3); % initial guess
-U_lb = repmat([-50 -50 -50], Nc, 1); % lower bound
-U_ub = repmat([100 100 100], Nc, 1); % upper bound
+U_lb = repmat([-100 -100 -100], Nc, 1); % lower bound
+U_ub = repmat([1000 1000 1000], Nc, 1); % upper bound
 
 % log the state and control input
 x_log = []; u_log = [];
+
+% barriers
+x_barrier = [0.4 0.4]'; % barrier point (for reactor 2)
+d_barrier = 0.05; % distance to barrier
 
 % rolling optimization
 opt_options = optimoptions('fmincon', 'Display', 'off');
@@ -119,15 +128,15 @@ for i_sim = 1:sim_steps
     % display elapsed time of the current loop
     fprintf('Simulation step %d, elapsed time: %.4f seconds, current error: %.4f\n', i_sim, toc, norm(x0 - xs));
     % terminal condition
-    if norm(x0 - xs) < 25
+    if norm(x0 - xs) < 5
         sample_interval = 0.01;
-        R = 1e-2*eye(3);
+        R = 5e-3*eye(3);
     end
     simulation_timer = simulation_timer + sample_interval;
-    if norm(x0 - xs) < 5
-        fprintf('Terminal condition met at step %d\n', i_sim);
-        break;
-    end
+    % if norm(x0([1:2, 4:5, 7:8]) - xs([1:2, 4:5, 7:8])) < 0.03 && norm(x0([3, 6, 9])-xs([3, 6, 9])) < 0.2
+    %     fprintf('Terminal condition met at step %d\n', i_sim);
+    %     break;
+    % end
 end
 
 x_log = [x0_initial x_log]; % add initial state to log
@@ -137,7 +146,7 @@ fprintf('Total simulation time: %.4f seconds\n', simulation_timer);
 % plot temperature
 figure(1)
 grid on
-xlabel ('Time(s)')
+xlabel('sim_step')
 plot(x_log(3,:),'linewidth',1.5)
 hold on
 plot(x_log(6,:),'linewidth',1.5)
@@ -146,6 +155,37 @@ plot(x_log(9,:),'linewidth',1.5)
 ylabel('Temperature (K)')
 legend('T1', 'T2', 'T3')
 
+% plot other states
+figure(2)
+grid on
+plot(x_log(1,:), x_log(2,:), 'linewidth', 1, 'Color', 'r')
+hold on
+plot(x_log(4,:), x_log(5,:), 'linewidth', 1, 'Color', 'g')
+hold on
+plot(x_log(7,:), x_log(8,:), 'linewidth', 1, 'Color', 'b')
+hold on
+scatter(xs(1), xs(2), 'r*')
+hold on
+scatter(xs(4), xs(5), 'g*')
+hold on
+scatter(xs(7), xs(8), 'b*')
+xlabel('Concentration of A')
+ylabel('Concentration of B')
+legend('Reactor 1', 'Reactor 2', 'Reactor 3')
+
+% plot control input
+figure(3)
+grid on
+xlabel('sim_step')
+plot(u_log(1,:), 'linewidth', 1.5)
+hold on
+plot(u_log(2,:), 'linewidth', 1.5)
+hold on
+plot(u_log(3,:), 'linewidth', 1.5)
+ylabel('Control input (J/s)')
+legend('u1', 'u2', 'u3')
+
+%% local functions
 
 function x_nxt = sysfwd(sys, x0, u)
 % sysfwd: forward simulation of the system (one sample interval)
@@ -181,7 +221,41 @@ for i = 1:Np
     delta_subx_array = x_sample - repmat(xs, 1, size(x_sample, 2)); % X - Xs
     sub_weighted_norm = trace(delta_subx_array' * Q * delta_subx_array);
     sub_discreted_normed_integeral = simulation_interval * sub_weighted_norm;
-    J = J + sub_discreted_normed_integeral + u_i' * Ru * u_i * simulation_interval;
+    J = J + sub_discreted_normed_integeral + u_i' * Ru * u_i * sample_interval;
     x0 = x_sample(:, end); % update state
+end
+end
+
+% nonlinear constraint function
+function [cineq, ceq] = nonlinear_horizon(subsys, u_host, u_adj, x0, x_barrier, d_barrier, N, ORDER)
+% suppose ||x0-x_barrier||>=d_barrier
+if ~exist('N', 'var')
+    N = 1;
+end
+
+if ~exist('ORDER', 'var')
+    ORDER = 1;
+end
+
+if ORDER == 1
+    u_overall = [u_host u_adj];
+elseif ORDER == 2
+    u_overall = [u_adj(:,1) u_host u_adj(:,2)];
+else
+    u_overall = [u_adj u_host];
+end
+
+cineq = zeros(N, 1); ceq = [];
+U = [u_host u_adj]';
+for i = 1:N
+    if i < size(U, 2)
+        u_i = U(:, i)';
+    else
+        u_i = U(:, size(U, 2))';
+    end
+    x0_sample = sysfwd(subsys, x0, u_i);
+    x0_new = x0_sample(:, end); % new state
+    cineq(i, :) = d_barrier - norm(x0_new-x_barrier);
+    x0 = x0_new; % update state
 end
 end

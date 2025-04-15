@@ -41,5 +41,10 @@ xs9=314.757389283257;
 x_initial  = [xs1 xs2 xs3 xs4 xs5 xs6 xs7 xs8 xs9]';
 [x_eq, fval] = fsolve(@(x) func(x, u_stable), x_initial, optimset('Display', 'off'));
 % show equilibrium state
-fprintf('Equilibrium state:\n');
+fprintf('Equilibrium derivation:\n');
 disp(norm(fval))
+% print equilibrium temperature
+fprintf('Equilibrium temperature:\n');
+fprintf('T1 = %.2f\n', x_eq(3));
+fprintf('T2 = %.2f\n', x_eq(6));
+fprintf('T3 = %.2f\n', x_eq(9));
