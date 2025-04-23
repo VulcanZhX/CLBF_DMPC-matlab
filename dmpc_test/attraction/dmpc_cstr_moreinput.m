@@ -50,7 +50,7 @@ Ru = 1e-4*diag([0.1 0.1 0.1 0.5 0.5]); % control cost
 
 % initialize control input
 U0 = rand(Nc, 5); % initial guess for control input
-U_lb = repmat([-500 -500 -600 2.5 0], Nc, 1); % lower bound
+U_lb = repmat([-500 -500 -600 2 0], Nc, 1); % lower bound
 U_ub = repmat([800 800 1000 15 1.25], Nc, 1); % upper bound
 
 % log the state and control input
