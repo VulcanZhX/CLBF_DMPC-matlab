@@ -2,5 +2,9 @@ dmpc-acc-matlab/dmpc-acc-matlab/Performance_DMPC.mat
 dmpc_test/dmpc_demo_coupled1.asv
 dmpc_test/dcmpc_real_test.asv
 .vscode/launch.json
+<<<<<<< HEAD
 nohup.out
 simulation/simulation/ydmpc2.mat
+=======
+dmpc_test/attraction/attraction_region.asv
+>>>>>>> 51d6221ec6ddf28419c16e970833238d1ae4ac86

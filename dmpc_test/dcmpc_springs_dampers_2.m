@@ -39,11 +39,31 @@ U_ub = 5*ones(Nc, 3); % upper bound
 x_log = []; u_log = [];
 
 % barriers
-x_barrier = [0.1 0.25]'; % barrier point
-d_barrier = 0.1; % distance to barrier
+x_barrier = [0.21 0.33]'; % barrier point
+d_barrier = 0.15; % distance to barrier
 
 % lyap_formulation
+% 1. linearized system around the equilibrium 
+A_lin = [0 m1 0 0 0 0;
+        -k0-kc -hd kc 0 0 0;
+        0 0 0 m2 0 0;
+        kc 0 -k0-2*kc -hd kc 0;
+        0 0 0 0 0 m3;
+        0 0 kc 0 -k0-kc -hd];
+Q = eye(6);
+P_lyap = lyap(A_lin', Q); % lyapunov equation
+c1 = min(eig(P_lyap));
+c2 = max(eig(P_lyap));
 
+P_lyap1 = P_lyap(1:2, 1:2);
+P_lyap2 = P_lyap(3:4, 3:4);
+P_lyap3 = P_lyap(5:6, 5:6);
+c1_1 = min(eig(P_lyap1));
+c1_2 = min(eig(P_lyap2));
+c1_3 = min(eig(P_lyap3));
+c2_1 = max(eig(P_lyap1));
+c2_2 = max(eig(P_lyap2));
+c2_3 = max(eig(P_lyap3));
 
 % terminal constriant cost function B(x) = d_barrier - ||x-x_barrier||
 global B_terminal_cost
@@ -228,14 +248,15 @@ else
 end
 
 cineq = zeros(N, 1); ceq = [];
-% U = [u_host u_adj]';
+U = [u_host u_adj]';
 for i = 1:N
-    u_i = u_overall(min(i, Nc), :)';
+    u_i = U(:, min(i, Nc));
     [~, x0_new] = ode45(@(t, x) subsys(x, u_i), [0 sample_interval], x0);
     x0_new = x0_new(end, :)';
     cineq(i, :) = d_barrier - norm(x0_new([3, 5])-x_barrier);
     x0 = x0_new; % update state
 end
+
 end
 
 function [cineq, ceq] = nonlinear_gamma_horizon(subsys, gamma, u_host, u_adj, u_host_pre, u_adj_pre, x0, x_barrier, d_barrier, N, ORDER)
@@ -249,10 +270,6 @@ if ~exist('ORDER', 'var')
     ORDER = 1;
 end
 
-cineq = zeros(N, 1); ceq = [];
-u_host = gamma(1)*u_host + (1-gamma(1))*u_host_pre;
-u_adj = [gamma(2)*u_adj(:, 1) + (1-gamma(2))*u_adj_pre(:, 1) gamma(3)*u_adj(:, 2) + (1-gamma(3))*u_adj_pre(:, 2)];
-
 if ORDER == 1
     u_overall = [u_host u_adj];
 elseif ORDER == 2
@@ -261,9 +278,12 @@ else
     u_overall = [u_adj u_host];
 end
 
-% U = [u_host u_adj]';
+cineq = zeros(N, 1); ceq = [];
+u_host = gamma(1)*u_host + (1-gamma(1))*u_host_pre;
+u_adj = [gamma(2)*u_adj(:, 1) + (1-gamma(2))*u_adj_pre(:, 1) gamma(3)*u_adj(:, 2) + (1-gamma(3))*u_adj_pre(:, 2)];
+U = [u_host u_adj]';
 for i = 1:N
-    u_i = u_overall(min(i, Nc), :)';
+    u_i = U(:, min(i, Nc));
     [~, x0_new] = ode45(@(t, x) subsys(x, u_i), [0 sample_interval], x0);
     x0_new = x0_new(end, :)';
     cineq(i, :) = d_barrier - norm(x0_new([3, 5])-x_barrier);
