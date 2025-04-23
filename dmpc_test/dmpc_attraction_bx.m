@@ -42,7 +42,7 @@ x_log = [];
 u_log = [];
 
 % control lyapunov-barrier function
-d_barrier = 0.5; x_barrier = [-0.3 0]';
+d_barrier = 0.3; x_barrier = [-0.3 0]';
 
 eps = 0.2; % abs(barrier_lowbound)
 bar = @(x)max(d_barrier - sqrt((x-x_barrier)'*diag([1, 1])*(x-x_barrier)), -eps);

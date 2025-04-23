@@ -9,12 +9,9 @@ Ff1=8.33; Ff2=0.5;
 V1=13.41; V2=13.5; V3=0.5;
 alA=3.5; alB=1.1;alC=0.5;
 kA=0.2; kB=0.018;
-EAR=100; EBR=150;
+EAR=-100; EBR=-150;
 dHA=-40; dHB=-50;
-% dHA = -60; dHB = -70;
 Cp=2.5; T0=313; xA0=1;
-
-% u(4) = Ff1; u(5) = Ff2;
 
 % system definition
 func = @(x,u) [
@@ -31,7 +28,7 @@ func = @(x,u) [
 
 % solve system equilibrium
 u_stable = [0 0 0]';
-x0_initial = [0.63 0.28 400 0.55 0.5 411 0.5 0.360 384]'; x0 = x0_initial;
+x0_initial = [0.13 0.15 440 0.25 0.1 421 0.12 0.170 404]'; x0 = x0_initial;
 [xs, fval] = fsolve(@(x) func(x, u_stable), x0_initial, optimset('Display', 'off'));
 % % initial state and target state (backup)
 % % xsi solved by fsolve(@(x)func(x,0),x_init)
@@ -49,15 +46,15 @@ x0_initial = [0.63 0.28 400 0.55 0.5 411 0.5 0.360 384]'; x0 = x0_initial;
 
 % time parameters
 global sample_interval simulation_interval
-sample_interval = 0.025; simulation_interval = 1e-4;
+sample_interval = 0.01; simulation_interval = 1e-4;
 sim_steps = 1000; % number of simulation steps, overall time = sim_steps*sample_interval
 max_p_iteration = 10; % number of iterations within one sample interval
 
 % controller parameters
 global Nc Np Q Ru
-Nc = 3; % controller horizon
-Np = 3; % prediction horizon
-Q = diag([1, 1, 0.01, 1, 1, 0.01, 1.2, 1.2, 0.02]); % state cost
+Nc = 2; % controller horizon
+Np = 4; % prediction horizon
+Q = diag([1, 1, 0.1, 1, 1, 0.1, 1.2, 1.2, 0.2]); % state cost
 Ru = 1e-4*eye(3); % control cost
 
 % initial input guess and bounds
@@ -69,10 +66,10 @@ U_ub = repmat([1000 1000 750], Nc, 1); % upper bound
 x_log = []; u_log = [];
 
 % barriers
-x_barrier = [0.1 0.1]'; % barrier point (for reactor 2)
-d_barrier = 0.05; % distance to barrier
+x_barrier = [0.4 0.11]'; % barrier point (for reactor 2)
+d_barrier = 0.077; % distance to barrier
 global B_terminal_cost
-B_terminal_cost = @(x) (d_barrier - norm(x([7, 8])-x_barrier));
+B_terminal_cost = @(x) (d_barrier - norm(x([4, 5])-x_barrier));
 
 
 
@@ -83,31 +80,34 @@ for i_sim = 1:sim_steps
     tic; % begin current loop timer
     for i_p = 1:max_p_iteration
         % optimization problem for input 1
-        U_host_init = U0(:, 1);
-        U_adj_init = U0(:, 2:3);
-        localcost = @(U)sub_cost_function(func, U, U_adj_init, x0, xs, 1);
-        nonlin_handle = @(U)nonlinear_horizon(func, U, U_adj_init, x0, Np, 1);
-        opt_problem1 = createOptimProblem('fmincon', 'objective', localcost, ...
-            'x0', U_host_init, 'lb', U_lb(:, 1), 'ub', U_ub(:, 1), 'nonlcon', nonlin_handle, 'options', opt_options);
-        [U_opt1, J_opt1] = fmincon(opt_problem1);
+        % U_host_init = U0(:, 1);
+        % U_adj_init = U0(:, 2:3);
+        % localcost = @(U)sub_cost_function(func, U, U_adj_init, x0, xs, 1);
+        % nonlin_handle = @(U)nonlinear_horizon(func, U, U_adj_init, x0, Np, 1);
+        % opt_problem1 = createOptimProblem('fmincon', 'objective', localcost, ...
+        %     'x0', U_host_init, 'lb', U_lb(:, 1), 'ub', U_ub(:, 1), 'nonlcon', nonlin_handle, 'options', opt_options);
+        % [U_opt1, J_opt1] = fmincon(opt_problem1);
 
-        % optimization problem for input 2
-        U_host_init = U0(:, 2);
-        U_adj_init = [U0(:, 1) U0(:, 3)];
+        % optimization problem for input 1,2
+        U_host_init = [U0(:, 1) U0(:, 2) U0(:, 3)];
+        U_adj_init = [];
         localcost = @(U)sub_cost_function(func, U, U_adj_init, x0, xs, 2);
         nonlin_handle = @(U)nonlinear_horizon(func, U, U_adj_init, x0, Np, 2);
         opt_problem2 = createOptimProblem('fmincon', 'objective', localcost, ...
-            'x0', U_host_init, 'lb', U_lb(:, 2), 'ub', U_ub(:, 2), 'nonlcon', nonlin_handle, 'options', opt_options);
-        [U_opt2, J_opt2] = fmincon(opt_problem2);
+            'x0', U_host_init, 'lb', U_lb(:, 1:3), 'ub', U_ub(:, 1:3), 'nonlcon', nonlin_handle, 'options', opt_options);
+        [U_opt, J_opt2] = fmincon(opt_problem2);
+        U_opt1 = U_opt(:, 1);
+        U_opt2 = U_opt(:, 2);
+        U_opt3 = U_opt(:, 3);
 
         % optimization problem for input 3
-        U_host_init = U0(:, 3);
-        U_adj_init = [U0(:, 1) U0(:, 2)];
-        localcost = @(U)sub_cost_function(func, U, U_adj_init, x0, xs, 3);
-        nonlin_handle = @(U)nonlinear_horizon(func, U, U_adj_init, x0, Np, 3);
-        opt_problem3 = createOptimProblem('fmincon', 'objective', localcost, ...
-            'x0', U_host_init, 'lb', U_lb(:, 3), 'ub', U_ub(:, 3), 'nonlcon', nonlin_handle, 'options', opt_options);
-        [U_opt3, J_opt3] = fmincon(opt_problem3);
+        % U_host_init = U0(:, 3);
+        % U_adj_init = [U0(:, 1) U0(:, 2)];
+        % localcost = @(U)sub_cost_function(func, U, U_adj_init, x0, xs, 3);
+        % nonlin_handle = @(U)nonlinear_horizon(func, U, U_adj_init, x0, Np, 3);
+        % opt_problem3 = createOptimProblem('fmincon', 'objective', localcost, ...
+        %     'x0', U_host_init, 'lb', U_lb(:, 3), 'ub', U_ub(:, 3), 'nonlcon', nonlin_handle, 'options', opt_options);
+        % [U_opt3, J_opt3] = fmincon(opt_problem3);
 
         % convex combination of the three optimization problems
         weightcost_obj = @(gamma) sub_cost_function(func, gamma(1)*U_opt1 + (1-gamma(1))*U0(:, 1),...
@@ -187,12 +187,6 @@ xlabel('Concentration of A')
 ylabel('Concentration of B')
 legend('Reactor 1', 'Reactor 2', 'Reactor 3')
 
-figure;
-grid on
-plot(x_log(1,:), x_log(4,:), 'linewidth', 1, 'Color', 'k')
-hold on
-fimplicit(@(x1,x2) (x1-x_barrier(1))^2+(x2-x_barrier(2))^2-0.95*d_barrier^2, "--")
-
 % plot control input
 figure
 grid on
@@ -204,42 +198,6 @@ hold on
 plot(u_log(3,:), 'linewidth', 1.5)
 ylabel('Control input (J/s)')
 legend('u1', 'u2', 'u3')
-
-
-%% What if we let u = [0 0 0] and let the whole system run?
-u_zero = [0 0 0]';
-x0 = x0_initial;
-[t, x_global_zero] = ode45(@(t, x)func(x, u_zero), [0 sim_steps*sample_interval], x0);
-% interpolate the state
-x_glboal_interp_zero = interp1(t, x_global_zero, 0:sample_interval:sim_steps*sample_interval);
-
-% plot natural state evolution
-figure
-plot(x_glboal_interp_zero(:, 1), x_glboal_interp_zero(:, 2), 'linewidth', 1, 'Color', 'r')
-hold on
-plot(x_glboal_interp_zero(:, 4), x_glboal_interp_zero(:, 5), 'linewidth', 1, 'Color', 'g')
-hold on
-plot(x_glboal_interp_zero(:, 7), x_glboal_interp_zero(:, 8), 'linewidth', 1, 'Color', 'b')
-hold on
-
-scatter(xs(1), xs(2), 'r*')
-hold on
-scatter(xs(4), xs(5), 'g*')
-hold on
-scatter(xs(7), xs(8), 'b*')
-hold on
-
-% plot temperature
-figure
-grid on
-xlabel('sim_step')
-plot(x_glboal_interp_zero(:, 3), 'linewidth', 1.5)
-hold on
-plot(x_glboal_interp_zero(:, 6), 'linewidth', 1.5)
-hold on
-plot(x_glboal_interp_zero(:, 9), 'linewidth', 1.5)
-ylabel('Temperature (K)')
-legend('T1', 'T2', 'T3')
 
 %% local functions
 
@@ -262,7 +220,8 @@ J = 0; % initialize cost
 if ORDER == 1
     u_overall = [u_host u_adj];
 elseif ORDER == 2
-    u_overall = [u_adj(:,1) u_host u_adj(:,2)];
+    %u_overall = [u_adj(:,1) u_host u_adj(:,2)];
+    u_overall = [u_host u_adj];
 else
     u_overall = [u_adj u_host];
 end
@@ -279,6 +238,7 @@ for i = 1:Np
 end
 end
 
+
 % nonlinear constraint function
 function [cineq, ceq] = nonlinear_horizon(subsys, u_host, u_adj, x0, N, ORDER)
 % suppose ||x0-x_barrier||>=d_barrier
@@ -287,14 +247,15 @@ if ~exist('N', 'var')
     N = 1;
 end
 
-if ~exist('ORDER', 'var')
-    ORDER = 1;
-end
+% if ~exist('ORDER', 'var')
+%     ORDER = 1;
+% end
 
 if ORDER == 1
     u_overall = [u_host u_adj];
 elseif ORDER == 2
-    u_overall = [u_adj(:,1) u_host u_adj(:,2)];
+    %u_overall = [u_adj(:,1) u_host u_adj(:,2)];
+    u_overall = [u_host u_adj];
 else
     u_overall = [u_adj u_host];
 end
@@ -324,10 +285,12 @@ end
 cineq = zeros(N, 1); ceq = [];
 u_host = gamma(1)*u_host + (1-gamma(1))*u_host_pre;
 u_adj = [gamma(2)*u_adj(:, 1) + (1-gamma(2))*u_adj_pre(:, 1) gamma(3)*u_adj(:, 2) + (1-gamma(3))*u_adj_pre(:, 2)];
+
 if ORDER == 1
     u_overall = [u_host u_adj];
 elseif ORDER == 2
-    u_overall = [u_adj(:,1) u_host u_adj(:,2)];
+    %u_overall = [u_adj(:,1) u_host u_adj(:,2)];
+    u_overall = [u_host u_adj];
 else
     u_overall = [u_adj u_host];
 end
